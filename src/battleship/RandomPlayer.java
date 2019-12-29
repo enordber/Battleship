@@ -11,11 +11,9 @@ public class RandomPlayer extends AIPlayer {
 	@Override
 	int[] getNextShotPosition() {
 		int[] r = new int[2];
-		//choose row and column
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
-		//check if the position is unknown
-		while(getTargetGrid()[row][column] != ShipType.UNKNOWN) {
+		while(getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) {
 			row = getRandom().nextInt(getTargetGridRowCount());
 			column = getRandom().nextInt(getTargetGridColumnCount());			
 		}

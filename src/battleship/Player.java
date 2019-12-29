@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 abstract class Player {
 	static final int rowIndex = 0;
@@ -16,7 +17,11 @@ abstract class Player {
 		shipTypeToHitShipType.put(ShipType.DESTROYER, ShipType.DESTROYER_HIT);
 		shipTypeToHitShipType.put(ShipType.SUBMARINE, ShipType.SUBMARINE_HIT);
 	}
+	
+	//A called shot will have a non-numeric row label followed by a numeric column label
+	private static Pattern shotPattern = Pattern.compile("[^\\d.][\\d]+");
 
+	private BattleshipGame game;
 	private int oceanGridRowCount;
 	private int oceanGridColumnCount;
 	private int targetGridRowCount;
@@ -24,11 +29,11 @@ abstract class Player {
 	
 	//The targetGrid represents the opponents field, and only contains information
 	//gained from shots fired.
-	private ShipType[][] targetGrid;
+	private Ship[][] targetGrid;
 	
 	//The oceanGrid represents the players own field, and includes information
 	//about all of the player's ships.
-	private ShipType[][] oceanGrid;
+	private Ship[][] oceanGrid;
 	
 	private ArrayList<Ship> ships = new ArrayList<Ship>(5);
 	private Random random = new Random(65287);
@@ -43,22 +48,23 @@ abstract class Player {
 	}
 	
 	void init(){
-		targetGrid = new ShipType[targetGridRowCount][targetGridColumnCount];
-		for(ShipType[] row: targetGrid) {
-			Arrays.fill(row, ShipType.UNKNOWN);
+		targetGrid = new Ship[targetGridRowCount][targetGridColumnCount];
+		for(Ship[] row: targetGrid) {
+			Arrays.fill(row, Ship.UNKNOWN_SHIP);
 		}
 		
-		oceanGrid = new ShipType[oceanGridRowCount][oceanGridColumnCount];
-		for(ShipType[] row: oceanGrid) {
-			Arrays.fill(row, ShipType.NONE);
+		oceanGrid = new Ship[oceanGridRowCount][oceanGridColumnCount];
+		for(Ship[] row: oceanGrid) {
+			Arrays.fill(row, Ship.NO_SHIP);
 		}
+		ships = new ArrayList<Ship>(5);
 	}
 
-	ShipType[][] getTargetGrid() {
+	Ship[][] getTargetGrid() {
 		return targetGrid;
 	}
 	
-	ShipType[][] getOceanGrid() {
+	Ship[][] getOceanGrid() {
 		return oceanGrid;
 	}
 	
@@ -104,7 +110,7 @@ abstract class Player {
 		
 		//make sure positions are not already occupied
 		for(int[] position: positions) {
-			if(getShipAtPosition(position[columnIndex], position[rowIndex]) != null) {
+			if(getShipAtPosition(position[columnIndex], position[rowIndex]) != Ship.NO_SHIP) {
 				r = false;
 			}
 		}
@@ -114,7 +120,7 @@ abstract class Player {
 			ship.setPositions(positions);
 			ships.add(ship);
 			for(int[] position: positions) {
-				oceanGrid[position[rowIndex]][position[columnIndex]] = ship.getType();
+				oceanGrid[position[rowIndex]][position[columnIndex]] = ship;
 			}
 		}
 
@@ -122,7 +128,7 @@ abstract class Player {
 	}
 	
 	Ship getShipAtPosition(int column, int row) {
-		Ship r = null;
+		Ship r = Ship.NO_SHIP;
 
 		for(Ship ship: ships) {
 			if(ship.hitsAtPosition(column, row)) {
@@ -146,20 +152,17 @@ abstract class Player {
 	 * 
 	 * @param column
 	 * @param row
-	 * @return The ShipType at the position
+	 * @return The Ship at the position
 	 */
-	ShipType shotAt(int column, int row) {
-		ShipType r = ShipType.NONE;
+	Ship shotAt(int column, int row) {
 		Ship hitShip = getShipAtPosition(column, row);
-		if(hitShip != null) {
+		if(hitShip != Ship.NO_SHIP) {
 			hitShip.setHitAtPosition(column, row);
-			oceanGrid[row][column] = shipTypeToHitShipType.get(oceanGrid[row][column]);
-			r = hitShip.getType();
 		}
-		return r;
+		return hitShip;
 	}
 	
-	void registerShotOnTargetResults(int[] shotPosition, ShipType opponentShipAtPosition) {
+	void registerShotOnTargetResults(int[] shotPosition, Ship opponentShipAtPosition) {
 		getTargetGrid()[shotPosition[rowIndex]][shotPosition[columnIndex]] = opponentShipAtPosition;
 	}
 
@@ -174,11 +177,48 @@ abstract class Player {
 	int getTargetGridColumnCount() {
 		return targetGridColumnCount;
 	}
+	
+	BattleshipGame getGame() {
+		return game;
+	}
+
+	void setGame(BattleshipGame game) {
+		this.game = game;
+	}
+	
+	/**
+	 * Create the standard set of ships and places them randomly.
+	 */
+	void placeShips() {
+		ArrayList<Ship> ships = new ArrayList<Ship>();
+		ships.add(new Ship(ShipType.CARRIER));
+		ships.add(new Ship(ShipType.BATTLESHIP));
+		ships.add(new Ship(ShipType.CRUISER));
+		ships.add(new Ship(ShipType.SUBMARINE));
+		ships.add(new Ship(ShipType.DESTROYER));
+		placeShips(ships);
+	}
+
+	static int[] parseForShotPosition(String command) {
+		int[] r = null;
+
+		if(shotPattern.matcher(command).matches()) {
+			String columnLabel = command.replaceAll("[^\\d.]", "");
+			String rowLabel = command.replaceAll("[\\d.]", "");
+			int shotRowIndex = BattleshipGame.rowLabels.indexOf(rowLabel);
+			int shotColumnIndex = BattleshipGame.columnLabels.indexOf(columnLabel);
+			r =  new int[2];
+			r[rowIndex] = shotRowIndex;
+			r[columnIndex] = shotColumnIndex;
+		}
+
+		return r;
+	}
 }
 
-abstract class HumanPlayer extends Player {
+abstract class UIPlayer extends Player {
 
-	HumanPlayer(int oceanGridRowCount, int oceanGridColumnCount,
+	UIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
 		super(oceanGridRowCount, oceanGridColumnCount, targetGridRowCount,
 				targetGridColumnCount);

@@ -12,7 +12,7 @@ public class BattleshipGame {
 	Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
 
 	private Random random = new Random(42245);	
-	private HumanPlayer humanPlayer;
+	private UIPlayer uiPlayer;
 	private AIPlayer aiPlayer;
 
 	public static void main(String[] args) {
@@ -25,14 +25,16 @@ public class BattleshipGame {
 	}
 
 	public void playGame() {
-		humanPlayer = new CommandLinePlayer(10, 10, 10, 10);
-		humanPlayer.setRandomSeed(random.nextLong());
+//		humanPlayer = new CommandLinePlayer(10, 10, 10, 10);
+		uiPlayer = new GUIPlayer(10, 10, 10, 10);
+		uiPlayer.setRandomSeed(random.nextLong());
 		newGame();
-		humanPlayer.play(this);
 	}
 	
 	void newGame() {
-		aiPlayer = new RandomPlayer(10, 10, 10, 10);
+//		aiPlayer = new RandomPlayer(10, 10, 10, 10);
+		aiPlayer = new ProbabilityPlayer(10, 10, 10, 10);
+		aiPlayer.setGame(this);
 		aiPlayer.setRandomSeed(random.nextLong());
 		ArrayList<Ship> ships = new ArrayList<Ship>();
 		ships.add(new Ship(ShipType.CARRIER));
@@ -41,15 +43,20 @@ public class BattleshipGame {
 		ships.add(new Ship(ShipType.SUBMARINE));
 		ships.add(new Ship(ShipType.DESTROYER));
 		aiPlayer.placeShips(ships);
-		humanPlayer.init();
+		uiPlayer.init();
+		uiPlayer.play(this);
 	}
 
-	ShipType shootAt(int column, int row) {
+	Ship shootAt(int column, int row) {
 		return aiPlayer.shotAt(column, row);
 	}
 	
 	Player getOpponent() {
 		return aiPlayer;
+	}
+	
+	Player getUIPlayer() {
+		return uiPlayer;
 	}
  	
 	int[] getNextShotPosition() {
@@ -57,11 +64,12 @@ public class BattleshipGame {
 		return r;
 	}
 	
-	void registerShotOnTargetResults(int[] shotPosition, ShipType opponentShipAtPosition) {
+	void registerShotOnTargetResults(int[] shotPosition, Ship opponentShipAtPosition) {
 		aiPlayer.registerShotOnTargetResults(shotPosition, opponentShipAtPosition);
 	}
 	
-	boolean evaluateVictory() {
+	VictoryStatus evaluateVictory() {
+		VictoryStatus r = VictoryStatus.UNDECIDED;
 		boolean humanPlayerVictory = true;
 		boolean aiPlayerVictory = false;
 		for(Ship ship: aiPlayer.getShips()) {
@@ -71,18 +79,20 @@ public class BattleshipGame {
 		}
 		if(humanPlayerVictory) {
 			System.out.println("You Win.");
+			r = VictoryStatus.PLAYER_VICTORY;
 		} else {		
 		    aiPlayerVictory = true;
-		    for(Ship ship: humanPlayer.getShips()) {
+		    for(Ship ship: uiPlayer.getShips()) {
 		    	if(!ship.isSunk()) {
 		    		aiPlayerVictory = false;
 		    	}
 		    }
 		    if(aiPlayerVictory) {
 		    	System.out.println("You Lose.");
+		    	r = VictoryStatus.OPPONENT_VICTORY;
 		    }
 		}
 		
-		return humanPlayerVictory || aiPlayerVictory;
+		return r;
 	}
 }

@@ -3,9 +3,8 @@ package battleship;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.regex.Pattern;
 
-class CommandLinePlayer extends HumanPlayer {
+class CommandLinePlayer extends UIPlayer {
 	private static HashMap<String,String> menuItemDesciptions = new HashMap<String, String>();
 	static {
 		menuItemDesciptions.put("M","Print Menu.");
@@ -35,11 +34,7 @@ class CommandLinePlayer extends HumanPlayer {
 		shipTypeLabels.put(ShipType.NONE, ".");
 	}
 
-	//A called shot will have a non-numeric row label followed by a numeric column label
-	private static Pattern shotPattern = Pattern.compile("[^\\d.][\\d.]");
-
 	private Scanner scanner;
-	private BattleshipGame game;
 
 	CommandLinePlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
@@ -51,7 +46,7 @@ class CommandLinePlayer extends HumanPlayer {
 	 * Main game event loop.
 	 */
 	void play(BattleshipGame game) {
-		this.game = game;
+		setGame(game);
 		if(scanner == null) {
 			scanner = new Scanner(System.in);
 		}
@@ -75,9 +70,9 @@ class CommandLinePlayer extends HumanPlayer {
 				System.out.print("Incoming shot at " + 
 						BattleshipGame.rowLabels.get(incomingShotPosition[rowIndex]) +
 						BattleshipGame.columnLabels.get(incomingShotPosition[columnIndex]) + "... ");
-				ShipType ownShipAtPosition = shotAt(incomingShotPosition[columnIndex], 
+				Ship ownShipAtPosition = shotAt(incomingShotPosition[columnIndex], 
 						incomingShotPosition[rowIndex]);
-				if(ownShipAtPosition == ShipType.NONE) {
+				if(ownShipAtPosition == Ship.NO_SHIP) {
 					System.out.println("Miss");
 				} else {
 					System.out.println("Hit on " + ownShipAtPosition);
@@ -85,8 +80,8 @@ class CommandLinePlayer extends HumanPlayer {
 				
 				//send back result of the shot from opponent
 				game.registerShotOnTargetResults(incomingShotPosition, ownShipAtPosition);
-				boolean gameOver = game.evaluateVictory();
-				if(gameOver) {
+				VictoryStatus victoryStatus = game.evaluateVictory();
+				if(victoryStatus != VictoryStatus.UNDECIDED) {
 					System.out.println("Game Over.");
 				}
 			}
@@ -95,8 +90,8 @@ class CommandLinePlayer extends HumanPlayer {
 
 	private void fireShot(int[] shotPosition) {
 		//fire shot
-		ShipType opponentShipAtPosition = game.shootAt(shotPosition[columnIndex], shotPosition[rowIndex]);
-		if(opponentShipAtPosition == ShipType.NONE) {
+		Ship opponentShipAtPosition = getGame().shootAt(shotPosition[columnIndex], shotPosition[rowIndex]);
+		if(opponentShipAtPosition == Ship.NO_SHIP) {
 			System.out.println("Miss");
 		} else {
 			System.out.println("Hit on " + opponentShipAtPosition);
@@ -130,24 +125,13 @@ class CommandLinePlayer extends HumanPlayer {
 			break;
 		case "CO":
 			System.out.println("Opponent Ocean Grid. (Cheat, cheat, never beat.)");
-			printShipGrid(game.getOpponent().getOceanGrid());
+			printShipGrid(getGame().getOpponent().getOceanGrid());
 			break;
 		case "CT":
 			System.out.println("Opponent Target Grid.");
-			printShipGrid(game.getOpponent().getTargetGrid());
+			printShipGrid(getGame().getOpponent().getTargetGrid());
 		}
 
-	}
-
-	private void placeShips() {
-		System.out.println("place ships");
-		ArrayList<Ship> ships = new ArrayList<Ship>();
-		ships.add(new Ship(ShipType.CARRIER));
-		ships.add(new Ship(ShipType.BATTLESHIP));
-		ships.add(new Ship(ShipType.CRUISER));
-		ships.add(new Ship(ShipType.SUBMARINE));
-		ships.add(new Ship(ShipType.DESTROYER));
-		placeShips(ships);
 	}
 
 	private void printStatus() {
@@ -171,23 +155,7 @@ class CommandLinePlayer extends HumanPlayer {
 		}
 	}
 
-	private int[] parseForShotPosition(String command) {
-		int[] r = null;
-
-		if(shotPattern.matcher(command).matches()) {
-			String columnLabel = command.replaceAll("[^\\d.]", "");
-			String rowLabel = command.replaceAll("[\\d.]", "");
-			int shotRowIndex = BattleshipGame.rowLabels.indexOf(rowLabel);
-			int shotColumnIndex = BattleshipGame.columnLabels.indexOf(columnLabel);
-			r =  new int[2];
-			r[rowIndex] = shotRowIndex;
-			r[columnIndex] = shotColumnIndex;
-		}
-
-		return r;
-	}
-
-	private static void printShipGrid(ShipType[][] shipGrid) {
+	private static void printShipGrid(Ship[][] shipGrid) {
 		//TODO - print key
 		System.out.println();
 		String spacer = "  ";
@@ -205,7 +173,7 @@ class CommandLinePlayer extends HumanPlayer {
 			rowBuffer.append(BattleshipGame.rowLabels.get(i));
 			for(int j = 0; j < shipGrid[i].length; j++) {
 				rowBuffer.append(spacer);
-				rowBuffer.append(shipTypeLabels.get(shipGrid[i][j]));
+				rowBuffer.append(shipTypeLabels.get(shipGrid[i][j].getType()));
 			}
 			System.out.println(rowBuffer);
 		}
@@ -220,5 +188,4 @@ class CommandLinePlayer extends HumanPlayer {
 			System.out.println();
 		}
 	}
-
 }
