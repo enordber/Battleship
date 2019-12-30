@@ -7,13 +7,18 @@ import java.util.Random;
 
 public class BattleshipGame {
 	static final List<String> rowLabels = 
-	Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H", "I", "J");
+	Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
+			"M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X");
 	static final List<String> columnLabels = 
-	Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+	Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", 
+			"12", "13", "14", "15", "16", "17", "18", "19", "20", "21", 
+			"22" , "23", "24");
 
 	private Random random = new Random(42245);	
 	private UIPlayer uiPlayer;
 	private AIPlayer aiPlayer;
+	private int rowCount = 10;
+	private int columnCount = 10;
 
 	public static void main(String[] args) {
 		System.out.println("Battleship Game");
@@ -26,14 +31,14 @@ public class BattleshipGame {
 
 	public void playGame() {
 //		humanPlayer = new CommandLinePlayer(10, 10, 10, 10);
-		uiPlayer = new GUIPlayer(10, 10, 10, 10);
+		uiPlayer = new GUIPlayer(rowCount, columnCount, rowCount, columnCount);
 		uiPlayer.setRandomSeed(random.nextLong());
 		newGame();
 	}
 	
 	void newGame() {
 //		aiPlayer = new RandomPlayer(10, 10, 10, 10);
-		aiPlayer = new ProbabilityPlayer(10, 10, 10, 10);
+		aiPlayer = new ProbabilityPlayer(rowCount, columnCount, rowCount, columnCount);
 		aiPlayer.setGame(this);
 		aiPlayer.setRandomSeed(random.nextLong());
 		ArrayList<Ship> ships = new ArrayList<Ship>();

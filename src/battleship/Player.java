@@ -214,6 +214,14 @@ abstract class Player {
 
 		return r;
 	}
+
+	int getOceanGridRowCount() {
+		return oceanGridRowCount;
+	}
+
+	int getOceanGridColumnCount() {
+		return oceanGridColumnCount;
+	}
 }
 
 abstract class UIPlayer extends Player {

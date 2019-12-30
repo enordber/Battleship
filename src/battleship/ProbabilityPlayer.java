@@ -1,14 +1,14 @@
 package battleship;
 
 /**
- * This AI Player cheats by looking at the UI players board. Each 
- * shot has a configurable probability of hitting a ship.
+ * AI Player with a configurable probability of hitting a ship.
+ * This player cheats by looking at the UI player's ship locations.
  *  
  * @author enordber
  *
  */
 public class ProbabilityPlayer extends AIPlayer {
-	private double probability = 0.5;
+	private double probability = 0.4;
 
 	ProbabilityPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
@@ -19,18 +19,24 @@ public class ProbabilityPlayer extends AIPlayer {
 	@Override
 	int[] getNextShotPosition() {
 		int[] r = new int[2];
+		
 		boolean hit = getRandom().nextDouble() < probability;
+		//even if hit is randomly assigned false, set it to true if the
+		//only cells left unrevealed are occupied
 		hit |= allUnoccupiedCellsRevealed();
 		Ship[][] playerOceanGrid = getGame().getUIPlayer().getOceanGrid();
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
+
 		while((getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) 
 				|| (playerOceanGrid[row][column] != Ship.NO_SHIP ^ hit)) {
 			row = getRandom().nextInt(getTargetGridRowCount());
 			column = getRandom().nextInt(getTargetGridColumnCount());			
 		}
+		
 		r[columnIndex] = column;
 		r[rowIndex] = row;
+		
 		return r;
 	}
 	
