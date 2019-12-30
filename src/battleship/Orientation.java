@@ -2,5 +2,6 @@ package battleship;
 
 enum Orientation {
 	HORIZONTAL,
-	VERTICAL;
+	VERTICAL,
+	UNKNOWN;
 }

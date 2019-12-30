@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Ship {
-	private static final Map<ShipType,Integer> shipTypeToHoleCount =
+	static final Map<ShipType,Integer> shipTypeToHoleCount =
 			new HashMap<ShipType, Integer>();
 	static {
 		shipTypeToHoleCount.put(ShipType.BATTLESHIP,4);

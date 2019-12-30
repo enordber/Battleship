@@ -33,7 +33,8 @@ public class BattleshipGame {
 	
 	void newGame() {
 //		aiPlayer = new RandomPlayer(10, 10, 10, 10);
-		aiPlayer = new ProbabilityPlayer(rowCount, columnCount, rowCount, columnCount);
+//		aiPlayer = new ProbabilityPlayer(rowCount, columnCount, rowCount, columnCount);
+		aiPlayer = new SeekAndDestroyPlayer(rowCount, columnCount, rowCount, columnCount);
 		aiPlayer.setGame(this);
 		aiPlayer.setRandomSeed(random.nextLong());
 		ArrayList<Ship> ships = new ArrayList<Ship>();
@@ -78,7 +79,6 @@ public class BattleshipGame {
 			}
 		}
 		if(humanPlayerVictory) {
-			System.out.println("You Win.");
 			r = VictoryStatus.PLAYER_VICTORY;
 		} else {		
 		    aiPlayerVictory = true;
@@ -88,7 +88,6 @@ public class BattleshipGame {
 		    	}
 		    }
 		    if(aiPlayerVictory) {
-		    	System.out.println("You Lose.");
 		    	r = VictoryStatus.OPPONENT_VICTORY;
 		    }
 		}
