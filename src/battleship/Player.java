@@ -22,6 +22,10 @@ abstract class Player {
 	private static Pattern shotPattern = Pattern.compile("[^\\d.][\\d]+");
 
 	private BattleshipGame game;
+	
+	/*
+	 * Playing field dimensions.
+	 */
 	private int oceanGridRowCount;
 	private int oceanGridColumnCount;
 	private int targetGridRowCount;
@@ -93,6 +97,19 @@ abstract class Player {
 		}
 	}
 
+	/**
+	 * Places the given Ship in the specified cell with the given orientation
+	 * if it is a valid available location. The cell position indicated by
+	 * row and column indicated the upper-left-most position. The Ship either
+	 * goes to the right (Orientation.HORIZONTAL) or down 
+	 * (Orientation.VERTICAL) from this position.
+	 * 
+	 * @param ship
+	 * @param column
+	 * @param row
+	 * @param orientation
+	 * @return
+	 */
 	private boolean attemptPlacingShip(Ship ship, int column, int row, 
 			Orientation orientation) {
 		boolean r = true;
@@ -162,6 +179,13 @@ abstract class Player {
 		return hitShip;
 	}
 	
+	/**
+	 * Callback method to record the result of a shot at the specified cell 
+	 * position.
+	 * 
+	 * @param shotPosition
+	 * @param opponentShipAtPosition
+	 */
 	void registerShotOnTargetResults(int[] shotPosition, Ship opponentShipAtPosition) {
 		getTargetGrid()[shotPosition[rowIndex]][shotPosition[columnIndex]] = opponentShipAtPosition;
 	}
@@ -199,12 +223,19 @@ abstract class Player {
 		placeShips(ships);
 	}
 
-	static int[] parseForShotPosition(String command) {
+	/**
+	 * Parses a position String using row and column labels, returning the
+	 * corresponding indices.
+	 * 
+	 * @param position e.g 'E4', 'H9'
+	 * @return
+	 */
+	static int[] parseForShotPosition(String position) {
 		int[] r = null;
 
-		if(shotPattern.matcher(command).matches()) {
-			String columnLabel = command.replaceAll("[^\\d.]", "");
-			String rowLabel = command.replaceAll("[\\d.]", "");
+		if(shotPattern.matcher(position).matches()) {
+			String columnLabel = position.replaceAll("[^\\d.]", "");
+			String rowLabel = position.replaceAll("[\\d.]", "");
 			int shotRowIndex = BattleshipGame.rowLabels.indexOf(rowLabel);
 			int shotColumnIndex = BattleshipGame.columnLabels.indexOf(columnLabel);
 			r =  new int[2];
@@ -224,6 +255,12 @@ abstract class Player {
 	}
 }
 
+/**
+ * Base class for User Interface Player implementations.
+ * 
+ * @author enordber
+ *
+ */
 abstract class UIPlayer extends Player {
 
 	UIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
@@ -232,9 +269,21 @@ abstract class UIPlayer extends Player {
 				targetGridColumnCount);
 	}
 
+	/**
+	 * Called to begin game play. UIPlayer implementations should override 
+	 * this to provide the main game loop and/or user interface.
+	 * 
+	 * @param game
+	 */
 	abstract void play(BattleshipGame game);	
 }
 
+/**
+ * Base class for "Artificial Intelligence" Player implementations.
+ * 
+ * @author enordber
+ *
+ */
 abstract class AIPlayer extends Player {
 
 	AIPlayer(int oceanGridRowCount, int oceanGridColumnCount,

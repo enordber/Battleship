@@ -8,7 +8,7 @@ package battleship;
  *
  */
 public class ProbabilityPlayer extends AIPlayer {
-	private double probability = 0.4;
+	private double probability = 0.3;
 
 	ProbabilityPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
@@ -57,5 +57,9 @@ public class ProbabilityPlayer extends AIPlayer {
 
 	void setHitProbability(double probability) {
 		this.probability = probability;
+	}
+	
+	double getHitProbability() {
+		return probability;
 	}
 }

@@ -6,6 +6,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
@@ -18,15 +19,20 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.border.BevelBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
-public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener {
+public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListener {
 	private static final Color HIT_COLOR = Color.RED;
 	private static final Color TARGET_GRID_MISS_COLOR = Color.WHITE;
 	private static final Color TARGET_GRID_FIELD_COLOR = Color.CYAN;
 	private static final Color OCEAN_GRID_FIELD_COLOR = Color.BLUE;
 	private static final Color OCEAN_GRID_MISS_COLOR = Color.LIGHT_GRAY;
+	private static final Color BACKGROUND_COLOR = Color.WHITE;
 
 	private static final String PLACE_SHIPS_LABEL = "Place Ships";
 	private static final String NEW_GAME_LABEL = "New Game";
@@ -35,8 +41,11 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 	private JComponent[][] oceanGridCells;
 	private JLabel playerPreviousShotLabel;
 	private JLabel opponentPreviousShotLabel;
+	private JLabel difficultyLabel;
+	private double difficultySetting = 0.4;
 	private JPanel statusPanel;
-	
+	private MouseListener mouseListener;
+
 	private GameMode mode = GameMode.GAME_OVER;
 
 	GUIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
@@ -51,10 +60,12 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 		}
 		frame.setContentPane(new JPanel());
 		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS));
+		frame.getContentPane().setBackground(BACKGROUND_COLOR);
 		frame.getContentPane().add(getGridPanel());
 		playerPreviousShotLabel = new JLabel(" ");
 		opponentPreviousShotLabel = new JLabel(" ");
 		statusPanel = new JPanel();
+		statusPanel.setBackground(BACKGROUND_COLOR);
 		statusPanel.add(getStatusPanel());
 		frame.getContentPane().add(statusPanel);
 		frame.pack();
@@ -68,32 +79,59 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 	 */
 	private JPanel getGridPanel() {
 		JPanel gridPanel = new JPanel();
+		gridPanel.setBackground(BACKGROUND_COLOR);
 		gridPanel.setLayout(new BoxLayout(gridPanel, BoxLayout.Y_AXIS));
 		gridPanel.add(getTargetGridPanel(), BorderLayout.NORTH);
 		JPanel spacerPanel = new JPanel();
-		spacerPanel.setMinimumSize(new Dimension(10,10));
+		spacerPanel.setBackground(BACKGROUND_COLOR);
+		spacerPanel.setMinimumSize(new Dimension(40,40));
 		gridPanel.add(spacerPanel);
 		gridPanel.add(getOceanGridPanel(), BorderLayout.SOUTH);
-		gridPanel.add(spacerPanel);
 		gridPanel.add(getControlPanel());
 		return gridPanel;
 	}
 
 	private JPanel getControlPanel() {
 		JPanel controlPanel = new JPanel();
+		controlPanel.setBackground(BACKGROUND_COLOR);
 		JButton placeShipsButton = new JButton(PLACE_SHIPS_LABEL);
 		placeShipsButton.addActionListener(this);
-//		controlPanel.add(placeShipsButton);
+		//		controlPanel.add(placeShipsButton);
 
 		JButton newGameButton = new JButton(NEW_GAME_LABEL);
 		newGameButton.addActionListener(this);
 		controlPanel.add(newGameButton);
+
+		if(getGame().getOpponent() instanceof ProbabilityPlayer) {
+			//add difficulty slider to control probability setting of 
+			//ProbabilityPlayer
+			ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
+			opponent.setHitProbability(difficultySetting);
+			int initialValue = (int)(difficultySetting * 100);
+
+			JPanel difficultyPanel = new JPanel();
+			difficultyPanel.setBackground(BACKGROUND_COLOR);
+			difficultyPanel.setLayout(new BoxLayout(difficultyPanel, BoxLayout.Y_AXIS));
+
+			difficultyLabel = new JLabel("Difficulty: " + opponent.getHitProbability());
+
+			JSlider difficultySlider = new JSlider(SwingConstants.HORIZONTAL);
+			difficultySlider.setMinimum(0);
+			difficultySlider.setMaximum(100);
+			difficultySlider.setValue(initialValue);
+			difficultySlider.addChangeListener(this);
+
+			difficultyPanel.add(difficultyLabel);
+			difficultyPanel.add(difficultySlider);
+			controlPanel.add(difficultyPanel);
+		}
+
 		return controlPanel;
 	}
 
 	private JPanel getOceanGridPanel() {
-		JPanel oceanGridPanel = new JPanel();
-		oceanGridPanel.setLayout(new GridLayout(getOceanGridRowCount(), getOceanGridColumnCount(), 1, 1));
+		JPanel cellPanel = new JPanel();
+		cellPanel.setLayout(new GridLayout(getOceanGridRowCount(), getOceanGridColumnCount(), 1, 1));
 		Ship[][] oceanGrid = getOceanGrid();
 		oceanGridCells = new JComponent[oceanGrid.length][oceanGrid[0].length];
 		for(int i = 0; i < oceanGrid.length; i++) {
@@ -112,17 +150,19 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 					cellComponent.setBackground(TARGET_GRID_MISS_COLOR);
 					cellComponent.add(new JLabel(oceanGrid[i][j].toString().substring(0, 1)));
 				}
-				oceanGridPanel.add(cellComponent);
+				cellPanel.add(cellComponent);
 			}
 		}
 
-		return oceanGridPanel;
+		return cellPanel;
 	}
 
 	private JPanel getTargetGridPanel() {
 		JPanel targetGridPanel = new JPanel();
 		targetGridPanel.setLayout(new GridLayout(getTargetGridRowCount(), getTargetGridColumnCount(), 1, 1));
 		Ship[][] targetGrid = getTargetGrid();
+		MouseListener mouseAdapter = getMouseListener();
+
 		for(int i = 0; i < targetGrid.length; i++) {
 			for(int j = 0; j < targetGrid[i].length; j++) {
 				String label = BattleshipGame.rowLabels.get(i) + BattleshipGame.columnLabels.get(j);
@@ -137,11 +177,28 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 				default:
 					cellComponent.setBackground(HIT_COLOR);
 				}
-				cellComponent.addMouseListener(this);
+				cellComponent.addMouseListener(mouseAdapter);
 				targetGridPanel.add(cellComponent);
 			}
 		}
+
 		return targetGridPanel;
+	}
+
+	private MouseListener getMouseListener() {
+		if(mouseListener == null) {
+			mouseListener = new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					JComponent cellComponent = (JComponent)e.getComponent();
+					if(mode == GameMode.GAMEPLAY) {
+						clickOnTargetCell(cellComponent);
+					}
+				}
+			};
+		}
+
+		return mouseListener;
 	}
 
 	private JComponent getCellComponent(String label) {
@@ -200,6 +257,12 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 		return statusPanel;
 	}
 
+	/**
+	 * Create a panel showing the status of the given Ships.
+	 * 
+	 * @param ships
+	 * @return
+	 */
 	private JPanel getShipStatusPanel(ArrayList<Ship> ships) {
 		JPanel shipStatusPanel = new JPanel();
 		shipStatusPanel.setLayout(new BoxLayout(shipStatusPanel, BoxLayout.Y_AXIS));
@@ -213,12 +276,12 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 			tableData[i][1] = ship.getHitCount() + " of " + ship.getSize();
 			tableData[i][2] = ship.isSunk();
 		}
-		
+
 		JTable shipStatusTable = new JTable(tableData, columnNames);
 		shipStatusTable.setPreferredScrollableViewportSize(new Dimension(
-			    		shipStatusTable.getPreferredSize().width,
-			    		shipStatusTable.getRowHeight() * ships.size()));
-		
+				shipStatusTable.getPreferredSize().width,
+				shipStatusTable.getRowHeight() * ships.size()));
+
 		shipStatusTable.getColumnModel().getColumn(0).setPreferredWidth(100);
 		JScrollPane scrollPane = new JScrollPane(shipStatusTable);
 		shipStatusPanel.add(scrollPane);
@@ -234,6 +297,11 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 		mode = GameMode.GAMEPLAY;
 	}
 
+	/**
+	 * Handles a mouse click on the given cellComponent of the Target Grid.
+	 * 
+	 * @param cellComponent
+	 */
 	private void clickOnTargetCell(JComponent cellComponent) {
 		String cellLabel = cellComponent.getName();
 		int[] position = parseForShotPosition(cellLabel);
@@ -250,27 +318,27 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 			cellComponent.revalidate();
 		}
 		registerShotOnTargetResults(position, opponentShipAtPosition);	
-		cellComponent.removeMouseListener(this);
+		cellComponent.removeMouseListener(getMouseListener());
 		cellComponent.setBorder(new BevelBorder(BevelBorder.LOWERED));
 		updateStatus();
 
 		VictoryStatus victoryStatus = getGame().evaluateVictory();
 		if(victoryStatus != VictoryStatus.UNDECIDED) {
-			//TODO - GUI notification
-			System.out.println("Game Over. " + victoryStatus);
 			endGame();
 		} else {		
 			acceptNextShot();
 			updateStatus();
 			victoryStatus = getGame().evaluateVictory();
 			if(victoryStatus != VictoryStatus.UNDECIDED) {
-				//TODO - GUI notification
-				System.out.println("Game Over. " + victoryStatus);
 				endGame();
 			}
 		}
 	}
 
+	/**
+	 * Calls for the next incoming shot from the opponent and registers the
+	 * result.
+	 */
 	private void acceptNextShot() {
 		int[] incomingShotPosition = getGame().getNextShotPosition();
 		String cellLabel = BattleshipGame.rowLabels.get(incomingShotPosition[rowIndex]) +
@@ -290,30 +358,6 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 	}
 
 	@Override
-	public void mouseClicked(MouseEvent e) {
-		JComponent cellComponent = (JComponent)e.getComponent();
-		if(mode == GameMode.GAMEPLAY) {
-			clickOnTargetCell(cellComponent);
-		}
-	}
-
-	@Override
-	public void mousePressed(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent e) {
-	}
-
-	@Override
-	public void mouseExited(MouseEvent e) {
-	}
-
-	@Override
 	public void actionPerformed(ActionEvent e) {
 		switch(e.getActionCommand()) {
 		case PLACE_SHIPS_LABEL:
@@ -325,10 +369,23 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 		}
 	}
 
+	@Override
+	public void stateChanged(ChangeEvent e) {
+		Object source = e.getSource();
+		if(source instanceof JSlider) {
+			JSlider slider = (JSlider) source;
+				int value = slider.getValue();
+				difficultySetting = value/100.0;
+				ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
+				opponent.setHitProbability(difficultySetting);
+				difficultyLabel.setText("Difficulty: " + opponent.getHitProbability());
+		}
+	}
+
 	private void newGame() {
 		getGame().newGame();
 	}
-	
+
 	private void endGame() {
 		mode = GameMode.GAME_OVER;
 		VictoryStatus victoryStatus = getGame().evaluateVictory();
@@ -338,14 +395,15 @@ public class GUIPlayer extends UIPlayer implements MouseListener, ActionListener
 		} else {
 			message += " You Lose.";
 		}
-//		JOptionPane victoryNotice = new JOptionPane(message);
-//		victoryNotice.setVisible(true);
 		JOptionPane.showMessageDialog(frame, message);
-		System.out.println(message);
 	}
 
+	/**
+	 * Refresh the Status panel.
+	 */
 	private void updateStatus() {
 		statusPanel.removeAll();
 		statusPanel.add(getStatusPanel());
 	}
+
 }

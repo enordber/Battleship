@@ -16,7 +16,7 @@ enum ShipType {
     
     private String type;
 
-    ShipType(String type) {
+    private ShipType(String type) {
     	this.type = type;
     }
     
