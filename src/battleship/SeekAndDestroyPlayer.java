@@ -46,55 +46,64 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			if(roomForVertical) {
 				boolean roomForHorizontal = isRoomForShip(activeTarget, Orientation.HORIZONTAL);
 				if(!roomForHorizontal) {
-					System.out.println("No room for " + activeTarget.type + " horizontally. Setting orientation to vertical");
 					activeTarget.setOrientation(Orientation.VERTICAL);
 				}
 			} else {
-				System.out.println("No room for " + activeTarget.type + " vertically. Setting orientation to horizontal.");
 				activeTarget.setOrientation(Orientation.HORIZONTAL);
 			}
 		}
+		ArrayList<int[]> candidatePositions = new ArrayList<int[]>(4);
 		switch(activeTarget.getOrientation()) {
 		case UNKNOWN:
 			//evaluate north
-			if(isGoodCandidatePosition(activeTarget.getPositionToTheNorth())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheNorth())) {
 				r = activeTarget.getPositionToTheNorth();
+				candidatePositions.add(r);
 			}
 			//evaluate east
-			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheEast())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheEast())) {
 				r = activeTarget.getPositionToTheEast();
+				candidatePositions.add(r);
 			}
 			//evaluate south
-			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheSouth())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheSouth())) {
 				r = activeTarget.getPositionToTheSouth();
+				candidatePositions.add(r);
 			}
 			//evaluate west
-			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheWest())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheWest())) {
 				r = activeTarget.getPositionToTheWest();
+				candidatePositions.add(r);
 			}
 			break;
 		case HORIZONTAL:
 			//evaluate east
-			if(isGoodCandidatePosition(activeTarget.getPositionToTheEast())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheEast())) {
 				r = activeTarget.getPositionToTheEast();
+				candidatePositions.add(r);
 			}
 			//evaluate west
-			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheWest())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheWest())) {
 				r = activeTarget.getPositionToTheWest();
+				candidatePositions.add(r);
 			}
 			break;
 		case VERTICAL:
 			//evaluate north
-			if(isGoodCandidatePosition(activeTarget.getPositionToTheNorth())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheNorth())) {
 				r = activeTarget.getPositionToTheNorth();
+				candidatePositions.add(r);
 			}
 			//evaluate south
-			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheSouth())) {
+			if(isEligibleCandidatePosition(activeTarget.getPositionToTheSouth())) {
 				r = activeTarget.getPositionToTheSouth();
+				candidatePositions.add(r);
 			}
 			break;
 		}
 
+		//randomly select from available candidates
+		r = candidatePositions.get(getRandom().nextInt(candidatePositions.size()));
 		return r;
 	}
 
@@ -107,14 +116,14 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		int available = 0;
 		switch(orientation) {
 		case VERTICAL:
-			//available north
+			//available positions to the north
 		    int i = row - 1;
 		    while(i >= 0 && targetGrid[i][column].getType() == ShipType.UNKNOWN) {
 		    	available++;
 		    	i--;
 		    }
 			
-			//available south
+			//available positions to the south
 			i = row + 1;
 			while(i < targetGrid.length && targetGrid[i][column].getType() == ShipType.UNKNOWN) {
 				available++;
@@ -123,14 +132,14 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			
 			break;
 		case HORIZONTAL:
-			//available west
+			//available available positions to the west
 			i = column - 1;
 		    while(i >= 0 && targetGrid[row][i].getType() == ShipType.UNKNOWN) {
 		    	available++;
 		    	i--;
 		    }
 				
-			//available east
+			//available positions to the east
 			i = column + 1;
 		    while(i < targetGrid[row].length && targetGrid[row][i].getType() == ShipType.UNKNOWN) {
 		    	available++;
@@ -141,18 +150,17 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		}
 		available++; //add one for the hit position, which was not counted above
 		r = available >= targetShip.getHoleCount();
-		System.out.println("SeekAndDestroyPlayer.isRoomForShip() " + targetShip + ", " + orientation + " available: " + available + " room: " + r);
 
 		return r;
 	}
 
-	private boolean isGoodCandidatePosition(int[] position) {
+	private boolean isEligibleCandidatePosition(int[] position) {
 		boolean r = true;
 		//check that position is within bounds of the target grid
-		r = position[rowIndex] >= 0 
-				&& position[rowIndex] < getTargetGridRowCount()
-				&& position[columnIndex] >= 0 
-				&& position[columnIndex] < getTargetGridColumnCount();
+		r = position[rowIndex] >= 0 &&
+				position[rowIndex] < getTargetGridRowCount() &&
+				position[columnIndex] >= 0 &&
+				position[columnIndex] < getTargetGridColumnCount();
 		
 		if(r) {
 			//check that position is not already revealed
@@ -162,14 +170,29 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		return r;
 	}
 
+	//TODO - add 'start wide' option
 	private int[] getNextSeekPosition() {
 		int[] r = new int[2];
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
+		double variance = 0.2;
+		double mean = 0.5;
+		boolean useGaussian = true;
+		//use gaussian to focus on cells in the center area of the board,
+		//which are more likely to be occupied
+		if(useGaussian) {
+		    row = (int) Math.min(getTargetGridRowCount()-1,Math.max(0,((getRandom().nextGaussian()*variance)+mean) * getTargetGridRowCount()));
+			column = (int) Math.min(getTargetGridColumnCount()-1,Math.max(0,((getRandom().nextGaussian()*variance)+mean) * getTargetGridColumnCount()));
+		}
 		boolean alternateCell = (row+column) % 2 == 0; 
 		while(alternateCell || getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) {
-			row = getRandom().nextInt(getTargetGridRowCount());
-			column = getRandom().nextInt(getTargetGridColumnCount());
+			if(useGaussian) {
+			    row = (int) Math.min(getTargetGridRowCount()-1,Math.max(0,((getRandom().nextGaussian()*variance)+mean) * getTargetGridRowCount()));
+				column = (int) Math.min(getTargetGridColumnCount()-1,Math.max(0,((getRandom().nextGaussian()*variance)+mean) * getTargetGridColumnCount()));
+			} else {
+				row = getRandom().nextInt(getTargetGridRowCount());
+				column = getRandom().nextInt(getTargetGridColumnCount());
+			}
 			alternateCell = (row+column) % 2 == 0; 
 		}
 		r[columnIndex] = column;

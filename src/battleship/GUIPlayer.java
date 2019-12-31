@@ -47,6 +47,9 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private MouseListener mouseListener;
 
 	private GameMode mode = GameMode.GAME_OVER;
+	private int salvoSize = 1;
+	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(salvoSize);
+	private ArrayList<JComponent> salvoCellComponents = new ArrayList<JComponent>(salvoSize);
 
 	GUIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {

@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
+
 public class BattleshipGame {
 	static final List<String> rowLabels = 
 	Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L",
@@ -13,13 +16,21 @@ public class BattleshipGame {
 	Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", 
 			"12", "13", "14", "15", "16", "17", "18", "19", "20");
 
-	private Random random = new Random(42245);	
+	private Random random = new Random(System.currentTimeMillis()); //new Random(42245);	
 	private UIPlayer uiPlayer;
 	private AIPlayer aiPlayer;
 	private int rowCount = 10;
 	private int columnCount = 10;
 
 	public static void main(String[] args) {
+        try {
+			UIManager.setLookAndFeel(
+			        UIManager.getCrossPlatformLookAndFeelClassName());
+		} catch (ClassNotFoundException | InstantiationException
+				| IllegalAccessException | UnsupportedLookAndFeelException e) {
+			e.printStackTrace();
+		}
+
 		BattleshipGame game = new BattleshipGame();
 		game.playGame();
 	}
