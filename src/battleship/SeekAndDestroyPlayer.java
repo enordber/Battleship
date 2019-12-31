@@ -41,54 +41,107 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 	private int[] getNextDestroyPosition() {
 		int[] r = null;
 		TargetShip activeTarget = destroyQueue.getFirst();
-		switch(activeTarget.orientation) {
+		if(activeTarget.getOrientation() == Orientation.UNKNOWN) {
+			boolean roomForVertical = isRoomForShip(activeTarget, Orientation.VERTICAL);
+			if(roomForVertical) {
+				boolean roomForHorizontal = isRoomForShip(activeTarget, Orientation.HORIZONTAL);
+				if(!roomForHorizontal) {
+					System.out.println("No room for " + activeTarget.type + " horizontally. Setting orientation to vertical");
+					activeTarget.setOrientation(Orientation.VERTICAL);
+				}
+			} else {
+				System.out.println("No room for " + activeTarget.type + " vertically. Setting orientation to horizontal.");
+				activeTarget.setOrientation(Orientation.HORIZONTAL);
+			}
+		}
+		switch(activeTarget.getOrientation()) {
 		case UNKNOWN:
 			//evaluate north
-			int[] candidatePosition = activeTarget.getPositionToTheNorth();
-			if(isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(isGoodCandidatePosition(activeTarget.getPositionToTheNorth())) {
+				r = activeTarget.getPositionToTheNorth();
 			}
 			//evaluate east
-			candidatePosition = activeTarget.getPositionToTheEast();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheEast())) {
+				r = activeTarget.getPositionToTheEast();
 			}
 			//evaluate south
-			candidatePosition = activeTarget.getPositionToTheSouth();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheSouth())) {
+				r = activeTarget.getPositionToTheSouth();
 			}
 			//evaluate west
-			candidatePosition = activeTarget.getPositionToTheWest();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheWest())) {
+				r = activeTarget.getPositionToTheWest();
 			}
 			break;
 		case HORIZONTAL:
 			//evaluate east
-			candidatePosition = activeTarget.getPositionToTheEast();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(isGoodCandidatePosition(activeTarget.getPositionToTheEast())) {
+				r = activeTarget.getPositionToTheEast();
 			}
 			//evaluate west
-			candidatePosition = activeTarget.getPositionToTheWest();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheWest())) {
+				r = activeTarget.getPositionToTheWest();
 			}
 			break;
 		case VERTICAL:
 			//evaluate north
-			candidatePosition = activeTarget.getPositionToTheNorth();
-			if(isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(isGoodCandidatePosition(activeTarget.getPositionToTheNorth())) {
+				r = activeTarget.getPositionToTheNorth();
 			}
 			//evaluate south
-			candidatePosition = activeTarget.getPositionToTheSouth();
-			if(r == null && isGoodCandidatePosition(candidatePosition)) {
-				r = candidatePosition;
+			if(r == null && isGoodCandidatePosition(activeTarget.getPositionToTheSouth())) {
+				r = activeTarget.getPositionToTheSouth();
 			}
 			break;
 		}
+
+		return r;
+	}
+
+	private boolean isRoomForShip(TargetShip targetShip, Orientation orientation) {
+		boolean r = true;
+		int[] position = targetShip.getKnownPositions().get(0);
+		int column = position[columnIndex];
+		int row = position[rowIndex];
+		Ship[][] targetGrid = getTargetGrid();
+		int available = 0;
+		switch(orientation) {
+		case VERTICAL:
+			//available north
+		    int i = row - 1;
+		    while(i >= 0 && targetGrid[i][column].getType() == ShipType.UNKNOWN) {
+		    	available++;
+		    	i--;
+		    }
+			
+			//available south
+			i = row + 1;
+			while(i < targetGrid.length && targetGrid[i][column].getType() == ShipType.UNKNOWN) {
+				available++;
+				i++;
+			}
+			
+			break;
+		case HORIZONTAL:
+			//available west
+			i = column - 1;
+		    while(i >= 0 && targetGrid[row][i].getType() == ShipType.UNKNOWN) {
+		    	available++;
+		    	i--;
+		    }
+				
+			//available east
+			i = column + 1;
+		    while(i < targetGrid[row].length && targetGrid[row][i].getType() == ShipType.UNKNOWN) {
+		    	available++;
+		    	i++;
+		    }
+
+		    break;
+		}
+		available++; //add one for the hit position, which was not counted above
+		r = available >= targetShip.getHoleCount();
+		System.out.println("SeekAndDestroyPlayer.isRoomForShip() " + targetShip + ", " + orientation + " available: " + available + " room: " + r);
 
 		return r;
 	}
@@ -105,8 +158,7 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			//check that position is not already revealed
 			r = getTargetGrid()[position[rowIndex]][position[columnIndex]] == Ship.UNKNOWN_SHIP;
 		}
-		
-		//TODO - add check that there is enough room for ship in this direction
+
 		return r;
 	}
 
@@ -114,11 +166,11 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		int[] r = new int[2];
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
-		boolean blackCell = (row+column) % 2 == 0; 
-		while(blackCell || getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) {
+		boolean alternateCell = (row+column) % 2 == 0; 
+		while(alternateCell || getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) {
 			row = getRandom().nextInt(getTargetGridRowCount());
 			column = getRandom().nextInt(getTargetGridColumnCount());
-			blackCell = (row+column) % 2 == 0; 
+			alternateCell = (row+column) % 2 == 0; 
 		}
 		r[columnIndex] = column;
 		r[rowIndex] = row;
@@ -175,6 +227,10 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			this.type = type;
 			holeCount = Ship.shipTypeToHoleCount.get(type);
 			knownPositions = new ArrayList<int[]>(holeCount);
+		}
+
+		private int getHoleCount() {
+			return holeCount;
 		}
 
 		int[] getPositionToTheNorth() {
@@ -249,6 +305,18 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			sb.append("");
 			sb.append("]");
 			return sb.toString();
+		}
+
+		private Orientation getOrientation() {
+			return orientation;
+		}
+
+		private void setOrientation(Orientation orientation) {
+			this.orientation = orientation;
+		}
+
+		private ArrayList<int[]> getKnownPositions() {
+			return knownPositions;
 		}
 	}
 }
