@@ -11,6 +11,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 
+import javax.swing.AbstractButton;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -21,6 +22,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTable;
+import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.border.BevelBorder;
 import javax.swing.event.ChangeEvent;
@@ -33,9 +35,11 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private static final Color OCEAN_GRID_FIELD_COLOR = Color.BLUE;
 	private static final Color OCEAN_GRID_MISS_COLOR = Color.LIGHT_GRAY;
 	private static final Color BACKGROUND_COLOR = Color.WHITE;
+	private static final Color SALVO_COLOR = Color.GREEN;
 
 	private static final String PLACE_SHIPS_LABEL = "Place Ships";
 	private static final String NEW_GAME_LABEL = "New Game";
+	private static final String SALVO_TOGGLE_LABEL = "Salvo";
 
 	private JFrame frame;
 	private JComponent[][] oceanGridCells;
@@ -46,7 +50,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private JPanel statusPanel;
 	private MouseListener mouseListener;
 
-	private GameMode mode = GameMode.GAME_OVER;
+	private GameMode mode = GameMode.BATTLESHIP;
 	private int salvoSize = 1;
 	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(salvoSize);
 	private ArrayList<JComponent> salvoCellComponents = new ArrayList<JComponent>(salvoSize);
@@ -57,9 +61,13 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 				targetGridColumnCount);
 	}
 
+	/**
+	 * Creates the GUI, reusing the frame if it has already been created.
+	 */
 	private void createGUI() {
 		if(frame == null) {
 			frame = new JFrame("Battleship");
+			frame.setLocation(750, 0); //for temporary dev convenience
 		}
 		frame.setContentPane(new JPanel());
 		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS));
@@ -72,7 +80,6 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		statusPanel.add(getStatusPanel());
 		frame.getContentPane().add(statusPanel);
 		frame.pack();
-		frame.setLocation(750, 0); //for temporary dev convenience
 		frame.setVisible(true);
 	}
 
@@ -90,16 +97,32 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		spacerPanel.setMinimumSize(new Dimension(40,40));
 		gridPanel.add(spacerPanel);
 		gridPanel.add(getOceanGridPanel(), BorderLayout.SOUTH);
+		
+		spacerPanel = new JPanel();
+		spacerPanel.setBackground(BACKGROUND_COLOR);
+		spacerPanel.setMinimumSize(new Dimension(40,40));
+		gridPanel.add(spacerPanel);
 		gridPanel.add(getControlPanel());
 		return gridPanel;
 	}
 
+	/**
+	 * Creates and returns a panel with UI controls.
+	 * 
+	 * @return
+	 */
 	private JPanel getControlPanel() {
 		JPanel controlPanel = new JPanel();
+		controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.X_AXIS));
 		controlPanel.setBackground(BACKGROUND_COLOR);
 		JButton placeShipsButton = new JButton(PLACE_SHIPS_LABEL);
 		placeShipsButton.addActionListener(this);
 		//		controlPanel.add(placeShipsButton);
+		
+		JToggleButton salvoToggle = new JToggleButton(SALVO_TOGGLE_LABEL);
+		salvoToggle.setSelected(getGameMode() == GameMode.SALVO);
+		salvoToggle.addActionListener(this);
+		controlPanel.add(salvoToggle);
 
 		JButton newGameButton = new JButton(NEW_GAME_LABEL);
 		newGameButton.addActionListener(this);
@@ -132,9 +155,15 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		return controlPanel;
 	}
 
+	/**
+	 * Creates and returns the panel containing the ocean grid,
+	 * representing the player's field.
+	 * 
+	 * @return
+	 */
 	private JPanel getOceanGridPanel() {
 		JPanel cellPanel = new JPanel();
-		cellPanel.setLayout(new GridLayout(getOceanGridRowCount(), getOceanGridColumnCount(), 1, 1));
+		cellPanel.setLayout(new GridLayout(getOceanGridRowCount(), getOceanGridColumnCount(), 2, 2));
 		Ship[][] oceanGrid = getOceanGrid();
 		oceanGridCells = new JComponent[oceanGrid.length][oceanGrid[0].length];
 		for(int i = 0; i < oceanGrid.length; i++) {
@@ -160,9 +189,15 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		return cellPanel;
 	}
 
+	/**
+	 * Creates and returns the panel containing the target grid,
+	 * representing the opponent's field.
+	 * 
+	 * @return
+	 */
 	private JPanel getTargetGridPanel() {
 		JPanel targetGridPanel = new JPanel();
-		targetGridPanel.setLayout(new GridLayout(getTargetGridRowCount(), getTargetGridColumnCount(), 1, 1));
+		targetGridPanel.setLayout(new GridLayout(getTargetGridRowCount(), getTargetGridColumnCount(), 2, 2));
 		Ship[][] targetGrid = getTargetGrid();
 		MouseListener mouseAdapter = getMouseListener();
 
@@ -194,7 +229,9 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 				@Override
 				public void mouseClicked(MouseEvent e) {
 					JComponent cellComponent = (JComponent)e.getComponent();
-					if(mode == GameMode.GAMEPLAY) {
+					switch(getGameMode()) {
+					case BATTLESHIP:
+					case SALVO:
 						clickOnTargetCell(cellComponent);
 					}
 				}
@@ -204,6 +241,15 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		return mouseListener;
 	}
 
+	/**
+	 * Creates and returns a grid cell component with the given label.
+	 * The label is the coordinates as they would be called out in 
+	 * gameplay (e.g. E4, C7).
+	 * 
+	 * @param label Cell coordinates as they would be called out in 
+	 * gameplay (e.g. E4, C7)
+	 * @return
+	 */
 	private JComponent getCellComponent(String label) {
 		Dimension cellSize = new Dimension(24,24);
 		JComponent r = new JPanel();
@@ -217,6 +263,12 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		return r;
 	}
 
+	/**
+	 * Creates and returns the status panel with information about
+	 * player and opponent ships.
+	 * 
+	 * @return status panel
+	 */
 	private JPanel getStatusPanel() {
 		JPanel statusPanel = new JPanel();
 		statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
@@ -292,38 +344,68 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		return shipStatusPanel;
 	}
 
+	/**
+	 * Places ships, creates the GUI, and begins gameplay.
+	 */
 	@Override
 	void play(BattleshipGame game) {
 		setGame(game);
 		placeShips();
+		updateSalvoSize();
 		createGUI();
-		mode = GameMode.GAMEPLAY;
+		
 	}
 
 	/**
 	 * Handles a mouse click on the given cellComponent of the Target Grid.
 	 * 
-	 * @param cellComponent
+	 * @param cellComponent The component that was clicked.
 	 */
 	private void clickOnTargetCell(JComponent cellComponent) {
-		String cellLabel = cellComponent.getName();
-		int[] position = parseForShotPosition(cellLabel);
-		Ship opponentShipAtPosition = 
-				getGame().shootAt(position[columnIndex], position[rowIndex]);
-		cellComponent.setForeground(Color.BLACK);
-		if(opponentShipAtPosition.getType() == ShipType.NONE) {
-			playerPreviousShotLabel.setText(cellLabel + " Miss");
-			cellComponent.setBackground(TARGET_GRID_MISS_COLOR);
+		if(salvoCellComponents.contains(cellComponent)) {
+			int index = salvoCellComponents.indexOf(cellComponent);
+			salvoCellComponents.remove(index);
+			salvoShots.remove(index);
+			cellComponent.setBackground(TARGET_GRID_FIELD_COLOR);
 		} else {
-			playerPreviousShotLabel.setText(cellLabel + " Hit on " + opponentShipAtPosition.getType());
-			cellComponent.setBackground(HIT_COLOR);
-			cellComponent.add(new JLabel(opponentShipAtPosition.getType().toString().substring(0, 1)));
-			cellComponent.revalidate();
+			String cellLabel = cellComponent.getName();
+			int[] position = parseForShotPosition(cellLabel);
+			salvoShots.add(position);
+			salvoCellComponents.add(cellComponent);
+			cellComponent.setBackground(SALVO_COLOR);
+			getTargetGrid()[position[rowIndex]][position[columnIndex]] = Ship.SALVO_TARGET;
+
+			if(salvoShots.size() == getSalvoSize()) {
+				fireShots();
+			}
 		}
-		registerShotOnTargetResults(position, opponentShipAtPosition);	
-		cellComponent.removeMouseListener(getMouseListener());
-		cellComponent.setBorder(new BevelBorder(BevelBorder.LOWERED));
-		updateStatus();
+	}
+
+	/**
+	 * Fire all shots currently in the salvo queue, then calls for
+	 * the next incoming shot(s).
+	 */
+	private void fireShots() {
+		for(int i = 0; i < salvoShots.size(); i++) {
+			int[] position = salvoShots.get(i);
+			JComponent cellComponent = salvoCellComponents.get(i);
+			String cellLabel = cellComponent.getName();
+			Ship opponentShipAtPosition = 
+					getGame().shootAt(position[columnIndex], position[rowIndex]);
+			cellComponent.setForeground(Color.BLACK);
+			if(opponentShipAtPosition.getType() == ShipType.NONE) {
+				playerPreviousShotLabel.setText(cellLabel + " Miss");
+				cellComponent.setBackground(TARGET_GRID_MISS_COLOR);
+			} else {
+				playerPreviousShotLabel.setText(cellLabel + " Hit on " + opponentShipAtPosition.getType());
+				cellComponent.setBackground(HIT_COLOR);
+				cellComponent.add(new JLabel(opponentShipAtPosition.getType().toString().substring(0, 1)));
+			}
+			registerShotOnTargetResults(position, opponentShipAtPosition);	
+			cellComponent.removeMouseListener(getMouseListener());
+			cellComponent.setBorder(new BevelBorder(BevelBorder.LOWERED));
+			updateStatus();
+		}
 
 		VictoryStatus victoryStatus = getGame().evaluateVictory();
 		if(victoryStatus != VictoryStatus.UNDECIDED) {
@@ -336,6 +418,26 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 				endGame();
 			}
 		}
+		salvoShots.clear();
+		salvoCellComponents.clear();
+		updateSalvoSize();
+	}
+
+	/**
+	 * Sets the current salvo size based on game mode and number of 
+	 * surviving ships.
+	 */
+	private void updateSalvoSize() {
+		int size = 1;
+		if(getGameMode() == GameMode.SALVO) {
+			size = 0;
+			for(Ship ship: getShips()) {
+				if(!ship.isSunk()) {
+					size++;
+				}
+			}
+		}
+		setSalvoSize(size);
 	}
 
 	/**
@@ -343,7 +445,21 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 * result.
 	 */
 	private void acceptNextShot() {
-		int[] incomingShotPosition = getGame().getNextShotPosition();
+		if(getGameMode() == GameMode.BATTLESHIP) {
+			int[] incomingShotPosition = getGame().getNextShotPosition();
+			acceptNextShot(incomingShotPosition);
+		} else if(getGameMode() == GameMode.SALVO) {
+			ArrayList<int[]> incomingSalvo = getGame().getNextSalvoPositions();
+			for(int[] incomingShotPosition: incomingSalvo) {
+				acceptNextShot(incomingShotPosition);
+			}
+		}
+	}
+
+	/**
+	 * Registers result of next incoming shot.
+	 */
+	private void acceptNextShot(int[] incomingShotPosition) {
 		String cellLabel = BattleshipGame.rowLabels.get(incomingShotPosition[rowIndex]) +
 				BattleshipGame.columnLabels.get(incomingShotPosition[columnIndex]);
 		Ship ownShipAtPosition = shotAt(incomingShotPosition[columnIndex], 
@@ -369,6 +485,13 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		case NEW_GAME_LABEL:
 			newGame();
 			break;
+		case SALVO_TOGGLE_LABEL:
+			if(((AbstractButton)e.getSource()).isSelected()) {
+				setGameMode(GameMode.SALVO);
+			} else {
+				setGameMode(GameMode.BATTLESHIP);
+			}
+			break;
 		}
 	}
 
@@ -377,11 +500,11 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		Object source = e.getSource();
 		if(source instanceof JSlider) {
 			JSlider slider = (JSlider) source;
-				int value = slider.getValue();
-				difficultySetting = value/100.0;
-				ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
-				opponent.setHitProbability(difficultySetting);
-				difficultyLabel.setText("Difficulty: " + opponent.getHitProbability());
+			int value = slider.getValue();
+			difficultySetting = value/100.0;
+			ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
+			opponent.setHitProbability(difficultySetting);
+			difficultyLabel.setText("Difficulty: " + opponent.getHitProbability());
 		}
 	}
 
@@ -390,7 +513,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	}
 
 	private void endGame() {
-		mode = GameMode.GAME_OVER;
+		setGameMode(GameMode.GAME_OVER);
 		VictoryStatus victoryStatus = getGame().evaluateVictory();
 		String message = "Game Over.";
 		if(victoryStatus == VictoryStatus.PLAYER_VICTORY) {
@@ -407,6 +530,32 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private void updateStatus() {
 		statusPanel.removeAll();
 		statusPanel.add(getStatusPanel());
+	}
+	
+	private GameMode getGameMode() {
+		return mode;
+	}
+	
+	private void setGameMode(GameMode mode) {
+		this.mode = mode;
+		clearSalvoQueue();
+		updateSalvoSize();
+	}
+	
+	private int getSalvoSize() {
+		return salvoSize;
+	}
+	
+	private void setSalvoSize(int salvoSize) {
+		this.salvoSize = salvoSize;
+	}
+	
+	private void clearSalvoQueue() {
+		for(JComponent cellComponent: salvoCellComponents) {
+			cellComponent.setBackground(TARGET_GRID_FIELD_COLOR);
+		}
+		salvoCellComponents.clear();
+		salvoShots.clear();
 	}
 
 }

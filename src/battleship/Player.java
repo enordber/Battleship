@@ -285,6 +285,7 @@ abstract class UIPlayer extends Player {
  *
  */
 abstract class AIPlayer extends Player {
+	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(5);
 
 	AIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
@@ -293,4 +294,17 @@ abstract class AIPlayer extends Player {
 	}
 	
 	abstract int[] getNextShotPosition();
+	
+	ArrayList<int[]> getNextSalvoShotPositions() {
+		salvoShots.clear();
+		for(Ship ship: getShips()) {
+			if(!ship.isSunk()) {
+				int[] position = getNextShotPosition();
+				getTargetGrid()[position[rowIndex]][position[columnIndex]] = Ship.SALVO_TARGET;
+				salvoShots.add(position);
+			}
+		}
+		
+		return salvoShots;
+	}
 }

@@ -1,7 +1,8 @@
 package battleship;
 
 public enum GameMode {
-	GAMEPLAY,
+	BATTLESHIP,
 	GAME_OVER,
-	PLACE_SHIPS;
+	PLACE_SHIPS,
+	SALVO;
 }

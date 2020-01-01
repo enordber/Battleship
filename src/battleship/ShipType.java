@@ -12,7 +12,8 @@ enum ShipType {
     CARRIER_HIT("aircraft carrier"),
     CRUISER_HIT("cruiser"),
     DESTROYER_HIT("destroyer"),
-    SUBMARINE_HIT("submarine");
+    SUBMARINE_HIT("submarine"),
+    SALVO_TARGET("Salvo Target");
     
     private String type;
 

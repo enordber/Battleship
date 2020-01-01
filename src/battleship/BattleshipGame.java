@@ -16,7 +16,7 @@ public class BattleshipGame {
 	Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", 
 			"12", "13", "14", "15", "16", "17", "18", "19", "20");
 
-	private Random random = new Random(System.currentTimeMillis()); //new Random(42245);	
+	private Random random = new Random(System.currentTimeMillis());	
 	private UIPlayer uiPlayer;
 	private AIPlayer aiPlayer;
 	private int rowCount = 10;
@@ -31,7 +31,8 @@ public class BattleshipGame {
 			e.printStackTrace();
 		}
 
-		BattleshipGame game = new BattleshipGame();
+        BattleshipGame game = new BattleshipGame();
+//        game.random = new Random(42245);
 		game.playGame();
 	}
 
@@ -76,6 +77,10 @@ public class BattleshipGame {
 		return r;
 	}
 	
+	ArrayList<int[]> getNextSalvoPositions() {
+		return aiPlayer.getNextSalvoShotPositions();
+	}
+	
 	void registerShotOnTargetResults(int[] shotPosition, Ship opponentShipAtPosition) {
 		aiPlayer.registerShotOnTargetResults(shotPosition, opponentShipAtPosition);
 	}
@@ -102,7 +107,7 @@ public class BattleshipGame {
 		    	r = VictoryStatus.OPPONENT_VICTORY;
 		    }
 		}
-		
+	
 		return r;
 	}
 }

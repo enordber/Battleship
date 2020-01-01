@@ -12,12 +12,14 @@ public class Ship {
 		shipTypeToHoleCount.put(ShipType.CRUISER,3);
 		shipTypeToHoleCount.put(ShipType.DESTROYER,2);
 		shipTypeToHoleCount.put(ShipType.SUBMARINE,3);
+		shipTypeToHoleCount.put(ShipType.SALVO_TARGET,1);
 		shipTypeToHoleCount.put(ShipType.NONE,0);
 		shipTypeToHoleCount.put(ShipType.UNKNOWN,0);
 	};
 	
 	static final Ship NO_SHIP = new Ship(ShipType.NONE);
 	static final Ship UNKNOWN_SHIP = new Ship(ShipType.UNKNOWN);
+	static final Ship SALVO_TARGET = new Ship(ShipType.SALVO_TARGET);
 	
 	private ShipType type;
 	
