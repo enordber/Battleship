@@ -51,6 +51,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private MouseListener mouseListener;
 
 	private GameMode mode = GameMode.BATTLESHIP;
+	boolean gameOver = false;
 	private int salvoSize = 1;
 	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(salvoSize);
 	private ArrayList<JComponent> salvoCellComponents = new ArrayList<JComponent>(salvoSize);
@@ -65,6 +66,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 * Creates the GUI, reusing the frame if it has already been created.
 	 */
 	private void createGUI() {
+		System.out.println("GUIPlayer.createGUI()");
 		if(frame == null) {
 			frame = new JFrame("Battleship");
 			frame.setLocation(750, 0); //for temporary dev convenience
@@ -229,9 +231,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 				@Override
 				public void mouseClicked(MouseEvent e) {
 					JComponent cellComponent = (JComponent)e.getComponent();
-					switch(getGameMode()) {
-					case BATTLESHIP:
-					case SALVO:
+					if(!gameOver) {
 						clickOnTargetCell(cellComponent);
 					}
 				}
@@ -349,11 +349,14 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 */
 	@Override
 	void play(BattleshipGame game) {
+		System.out.println("GUIPlayer.play()");
+		gameOver = false;
 		setGame(game);
 		placeShips();
+		salvoShots.clear();
+		salvoCellComponents.clear();
 		updateSalvoSize();
 		createGUI();
-		
 	}
 
 	/**
@@ -513,7 +516,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	}
 
 	private void endGame() {
-		setGameMode(GameMode.GAME_OVER);
+		gameOver = true;
 		VictoryStatus victoryStatus = getGame().evaluateVictory();
 		String message = "Game Over.";
 		if(victoryStatus == VictoryStatus.PLAYER_VICTORY) {

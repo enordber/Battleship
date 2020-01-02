@@ -8,6 +8,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import javax.swing.text.MaskFormatter;
+
 /**
  * AI Player that mimics a human player, using only information that
  * would be available to a human player.
@@ -41,6 +43,7 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 				r = getNextSeekPosition();
 			}
 		}
+		System.out.println("SeekAndDestroyPlayer.getNextShotPosition() " + Arrays.toString(r));
 		return r;
 	}
 
@@ -111,7 +114,7 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 				}
 				break;
 			}
-			
+
 			if(candidatePositions.size() == 0) {
 				if(targetShipIterator.hasNext()) {
 					activeTarget = targetShipIterator.next();
@@ -190,9 +193,15 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 				return r;
 	}
 
-	//TODO - add 'start wide' option
 	private int[] getNextSeekPosition() {
 		int[] r = new int[2];
+		r = getNextMaximizeDisruptionPosition();
+//		r = getNextCheckerboardPosition();
+		return r;
+	}
+
+	private int[] getNextCheckerboardPosition() {
+		int[]r = new int[2];
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
 		double variance = 0.2;
@@ -217,6 +226,121 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		}
 		r[columnIndex] = column;
 		r[rowIndex] = row;
+
+		return r;
+	}
+
+	/**
+	 * Selects a shot position based on the number of ship placements the shot
+	 * can rule out.
+	 * 
+	 * @return shot position
+	 */
+	private int[] getNextMaximizeDisruptionPosition() {
+		System.out.println("SeekAndDestroyPlayer.getNextMaximizeDisruptionPosition()");
+		int[]r = new int[2];
+		int maxPlacementsDisrupted = 0;
+		ArrayList<int[]> maxDisruptivePositions = new ArrayList<int[]>();
+		Ship[][] targetGrid = getTargetGrid();
+		int shipSize = getSizeOfLargestUnlocatedShip();
+		System.out.println("\tshipSize: " + shipSize);
+
+		for(int row = 0; row < targetGrid.length; row++) {
+			for(int column = 0; column < targetGrid[row].length; column++) {
+				if(targetGrid[row][column] == Ship.UNKNOWN_SHIP) {
+					int placementsDisrupted = getNumberOfPlacementsDisrupted(row, column, shipSize);
+					if(placementsDisrupted > maxPlacementsDisrupted) {
+						maxDisruptivePositions.clear();
+						maxPlacementsDisrupted = placementsDisrupted;
+					}
+					if(placementsDisrupted == maxPlacementsDisrupted) {
+						int[] position = new int[2];
+						position[rowIndex] = row;
+						position[columnIndex] = column;
+						maxDisruptivePositions.add(position);
+					}
+				}
+			}
+		}
+		System.out.println("\tmaxPlacementsDisrupted: " + maxPlacementsDisrupted);
+		System.out.println("\tmaxDisruptivePositions: " + maxDisruptivePositions.size());
+		int index = getRandom().nextInt(maxDisruptivePositions.size());
+		r = maxDisruptivePositions.get(index);
+
+		return r;
+	}
+
+	private int getSizeOfLargestUnlocatedShip() {
+		int r = 0;
+		ArrayList<Ship> opponentShips = getGame().getUIPlayer().getShips();
+		for(Ship ship: opponentShips) {
+			if(ship.getHitCount() == 0 && ship.getSize() > r) {
+				r = ship.getSize();
+			}
+		}
+
+		return r;
+	}
+
+	/**
+	 * Determines the number of distinct ship placements that would be 
+	 * hit/ruled out by a shot at the specified position.
+	 * 
+	 * @param row
+	 * @param column
+	 * @param shipSize
+	 * @return
+	 */
+	private int getNumberOfPlacementsDisrupted(int row, int column, int shipSize) {
+		int r = 0;
+		Ship[][] targetGrid = getTargetGrid();
+		//count number of contiguous unrevealed vertical cells, including the target
+		//cell, from row-(shipSize-1) to row+(shipSize-1)
+		int contiguousVertical = 1;
+		int minRow = Math.max(0, row - (shipSize - 1));
+		for(int i = row-1; i >= minRow; i--) {
+			if(targetGrid[i][column] == Ship.UNKNOWN_SHIP) {
+				contiguousVertical++;
+			} else {
+				break;
+			}
+		}
+
+		int maxRow = Math.min(getTargetGridRowCount() - 1, row + (shipSize - 1));
+		for(int i = row+1; i <= maxRow; i++) {
+			if(targetGrid[i][column] == Ship.UNKNOWN_SHIP) {
+				contiguousVertical++;
+			} else {
+				break;
+			}
+		}
+
+		//The number of disrupted vertical placements is contiguousVertical-(shipSize-1)
+		int disruptedVertical = Math.max(0, contiguousVertical - (shipSize - 1));
+
+		//count number of contiguous unrevealed horizontal cells, including the target
+		//cell, from column-(shipShip-1) to column+(shipSize-1)
+		int contiguousHorizontal = 1;
+		int minColumn = Math.max(0, column - (shipSize - 1));
+		for(int i = column-1; i >= minColumn; i--) {
+			if(targetGrid[row][i] == Ship.UNKNOWN_SHIP) {
+				contiguousHorizontal++;
+			} else {
+				break;
+			}
+		}
+
+		int maxColumn = Math.min(getTargetGridColumnCount() - 1, column + (shipSize -1));
+		for(int i = column+1; i <= maxColumn; i++) {
+			if(targetGrid[row][i] == Ship.UNKNOWN_SHIP) {
+				contiguousHorizontal++;
+			} else {
+				break;
+			}
+		}
+		//The number of disrupted horizontal placements is contiguousHorizontal-(shipSize-1)
+		int disruptedHorizontal = Math.max(0, contiguousHorizontal - (shipSize - 1));
+		r = disruptedHorizontal + disruptedVertical;
 
 		return r;
 	}
