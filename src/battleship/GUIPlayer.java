@@ -42,7 +42,8 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private static final String PLACE_SHIPS_LABEL = "Place Ships";
 	private static final String NEW_GAME_LABEL = "New Game";
 	private static final String SALVO_TOGGLE_LABEL = "Salvo Mode";
-	private static final String SEEK_AND_DESTROY_PLAYER_NAME = "Seek and Destroy";
+	private static final String FIRST_SHOT_TOGGLE_LABEL = "Opponent Shoots First";
+	private static final String SEEK_AND_DESTROY_PLAYER_NAME = "Seek ond Destroy";
 	private static final String RANDOM_PLAYER_NAME = "Random";
 	private static final String PROBABILITY_PLAYER_NAME = "Probability";
 
@@ -63,6 +64,8 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	private int salvoSize = 1;
 	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(salvoSize);
 	private ArrayList<JComponent> salvoCellComponents = new ArrayList<JComponent>(salvoSize);
+	private boolean opponentShootsFirst = false;
+	boolean firstShotFired = false;
 
 	GUIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
 			int targetGridRowCount, int targetGridColumnCount) {
@@ -134,8 +137,8 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		JPanel controlPanel = new JPanel();
 		controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
 		controlPanel.setBackground(BACKGROUND_COLOR);
-		JButton placeShipsButton = new JButton(PLACE_SHIPS_LABEL);
-		placeShipsButton.addActionListener(this);
+//		JButton placeShipsButton = new JButton(PLACE_SHIPS_LABEL);
+//		placeShipsButton.addActionListener(this);
 		//		controlPanel.add(placeShipsButton);
 
 		JButton newGameButton = new JButton(NEW_GAME_LABEL);
@@ -148,6 +151,12 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		salvoToggle.addActionListener(this);
 		controlPanel.add(salvoToggle);
 
+		JToggleButton firstShotToggle = new JCheckBox(FIRST_SHOT_TOGGLE_LABEL);
+		firstShotToggle.setBackground(BACKGROUND_COLOR);
+		firstShotToggle.setSelected(opponentShootsFirst);
+		firstShotToggle.addActionListener(this);
+		controlPanel.add(firstShotToggle);
+		
 		JPanel opponentChoicePanel = new JPanel();
 		opponentChoicePanel.setLayout(new BoxLayout(opponentChoicePanel, BoxLayout.Y_AXIS));
 		opponentChoicePanel.setBackground(BACKGROUND_COLOR);
@@ -362,12 +371,16 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	@Override
 	void play(BattleshipGame game) {
 		gameOver = false;
+		firstShotFired = false;
 		setGame(game);
 		placeShips();
 		salvoShots.clear();
 		salvoCellComponents.clear();
 		updateSalvoSize();
 		createGUI();
+		if(opponentShootsFirst) {
+			acceptNextShot();
+		}
 	}
 
 	/**
@@ -435,6 +448,7 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		salvoShots.clear();
 		salvoCellComponents.clear();
 		updateSalvoSize();
+		firstShotFired = true;
 	}
 
 	/**
@@ -532,6 +546,12 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 					setGameMode(GameMode.SALVO);
 				} else {
 					setGameMode(GameMode.BATTLESHIP);
+				}
+				break;
+			case FIRST_SHOT_TOGGLE_LABEL:
+				opponentShootsFirst = ((AbstractButton)e.getSource()).isSelected();
+				if(!firstShotFired) {
+					acceptNextShot();
 				}
 				break;
 			}
