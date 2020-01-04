@@ -24,6 +24,8 @@ public class ProbabilityPlayer extends AIPlayer {
 		//even if hit is randomly assigned false, set it to true if the
 		//only cells left unrevealed are occupied
 		hit |= allUnoccupiedCellsRevealed();
+		//set to true if all occupied cells have been revealed (this can happen in Salvo mode)
+		hit &= unrevealedOccupiedCell();
 		Ship[][] playerOceanGrid = getGame().getUIPlayer().getOceanGrid();
 		int row = getRandom().nextInt(getTargetGridRowCount());
 		int column = getRandom().nextInt(getTargetGridColumnCount());
@@ -44,14 +46,30 @@ public class ProbabilityPlayer extends AIPlayer {
 		boolean r = true;
 		Ship[][] uiPlayerOceanGrid = getGame().getUIPlayer().getOceanGrid();
 		Ship[][] targetGrid = getTargetGrid();
-		for(int i = 0; i < targetGrid.length; i++) {
-			for(int j = 0; j < targetGrid[i].length; j++) {
+		for(int i = 0; r && i < targetGrid.length; i++) {
+			for(int j = 0; r && j < targetGrid[i].length; j++) {
 				if(targetGrid[i][j] == Ship.UNKNOWN_SHIP &&
 						uiPlayerOceanGrid[i][j] == Ship.NO_SHIP) {
 					r = false;
 				}
 			}
 		}
+		return r;
+	}
+	
+	private boolean unrevealedOccupiedCell() {
+		boolean r = false;
+		Ship[][] uiPlayerOceanGrid = getGame().getUIPlayer().getOceanGrid();
+		Ship[][] targetGrid = getTargetGrid();
+		for(int i = 0; !r && i < targetGrid.length; i++) {
+			for(int j = 0; !r && j < targetGrid[i].length; j++) {
+				if(targetGrid[i][j] == Ship.UNKNOWN_SHIP &&
+						uiPlayerOceanGrid[i][j] != Ship.NO_SHIP) {
+					r = true;
+				}
+			}
+		}
+
 		return r;
 	}
 
@@ -61,5 +79,15 @@ public class ProbabilityPlayer extends AIPlayer {
 	
 	double getHitProbability() {
 		return probability;
+	}
+	
+	@Override
+	int getNumberOfDifficultyLevels() {
+	    return 100;	
+	}
+	
+	@Override
+	void setDifficultyLevel(int difficultyLevel) {
+		setHitProbability(difficultyLevel/100.0);
 	}
 }

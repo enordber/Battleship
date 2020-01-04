@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import javax.swing.AbstractButton;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -39,16 +41,22 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 
 	private static final String PLACE_SHIPS_LABEL = "Place Ships";
 	private static final String NEW_GAME_LABEL = "New Game";
-	private static final String SALVO_TOGGLE_LABEL = "Salvo";
+	private static final String SALVO_TOGGLE_LABEL = "Salvo Mode";
+	private static final String SEEK_AND_DESTROY_PLAYER_NAME = "Seek and Destroy";
+	private static final String RANDOM_PLAYER_NAME = "Random";
+	private static final String PROBABILITY_PLAYER_NAME = "Probability";
 
 	private JFrame frame;
 	private JComponent[][] oceanGridCells;
 	private JLabel playerPreviousShotLabel;
 	private JLabel opponentPreviousShotLabel;
 	private JLabel difficultyLabel;
-	private double difficultySetting = 0.4;
+	private int difficultySetting = 100;
 	private JPanel statusPanel;
+	private JPanel controlPanel;
 	private MouseListener mouseListener;
+	private JComboBox<String> opponentTypeComboBox;
+	private String currentOpponentType = SEEK_AND_DESTROY_PLAYER_NAME;
 
 	private GameMode mode = GameMode.BATTLESHIP;
 	boolean gameOver = false;
@@ -66,7 +74,6 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 * Creates the GUI, reusing the frame if it has already been created.
 	 */
 	private void createGUI() {
-		System.out.println("GUIPlayer.createGUI()");
 		if(frame == null) {
 			frame = new JFrame("Battleship");
 			frame.setLocation(750, 0); //for temporary dev convenience
@@ -74,13 +81,23 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		frame.setContentPane(new JPanel());
 		frame.getContentPane().setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.X_AXIS));
 		frame.getContentPane().setBackground(BACKGROUND_COLOR);
+
+		controlPanel = new JPanel();
+		controlPanel.add(getControlPanel());
+		controlPanel.setBackground(BACKGROUND_COLOR);
+//		controlPanel.setLayout(new BorderLayout());
+		frame.getContentPane().add(controlPanel);
+		
 		frame.getContentPane().add(getGridPanel());
 		playerPreviousShotLabel = new JLabel(" ");
 		opponentPreviousShotLabel = new JLabel(" ");
+		
 		statusPanel = new JPanel();
+		statusPanel.setLayout(new BorderLayout());
 		statusPanel.setBackground(BACKGROUND_COLOR);
-		statusPanel.add(getStatusPanel());
+		statusPanel.add(getStatusPanel(), BorderLayout.CENTER);
 		frame.getContentPane().add(statusPanel);
+		
 		frame.pack();
 		frame.setVisible(true);
 	}
@@ -99,12 +116,12 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		spacerPanel.setMinimumSize(new Dimension(40,40));
 		gridPanel.add(spacerPanel);
 		gridPanel.add(getOceanGridPanel(), BorderLayout.SOUTH);
-		
+
 		spacerPanel = new JPanel();
 		spacerPanel.setBackground(BACKGROUND_COLOR);
 		spacerPanel.setMinimumSize(new Dimension(40,40));
 		gridPanel.add(spacerPanel);
-		gridPanel.add(getControlPanel());
+		//		gridPanel.add(getControlPanel());
 		return gridPanel;
 	}
 
@@ -115,38 +132,54 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 */
 	private JPanel getControlPanel() {
 		JPanel controlPanel = new JPanel();
-		controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.X_AXIS));
+		controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
 		controlPanel.setBackground(BACKGROUND_COLOR);
 		JButton placeShipsButton = new JButton(PLACE_SHIPS_LABEL);
 		placeShipsButton.addActionListener(this);
 		//		controlPanel.add(placeShipsButton);
-		
-		JToggleButton salvoToggle = new JToggleButton(SALVO_TOGGLE_LABEL);
-		salvoToggle.setSelected(getGameMode() == GameMode.SALVO);
-		salvoToggle.addActionListener(this);
-		controlPanel.add(salvoToggle);
 
 		JButton newGameButton = new JButton(NEW_GAME_LABEL);
 		newGameButton.addActionListener(this);
 		controlPanel.add(newGameButton);
 
-		if(getGame().getOpponent() instanceof ProbabilityPlayer) {
-			//add difficulty slider to control probability setting of 
-			//ProbabilityPlayer
-			ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
-			opponent.setHitProbability(difficultySetting);
-			int initialValue = (int)(difficultySetting * 100);
+		JToggleButton salvoToggle = new JCheckBox(SALVO_TOGGLE_LABEL);
+		salvoToggle.setBackground(BACKGROUND_COLOR);
+		salvoToggle.setSelected(getGameMode() == GameMode.SALVO);
+		salvoToggle.addActionListener(this);
+		controlPanel.add(salvoToggle);
+
+		JPanel opponentChoicePanel = new JPanel();
+		opponentChoicePanel.setLayout(new BoxLayout(opponentChoicePanel, BoxLayout.Y_AXIS));
+		opponentChoicePanel.setBackground(BACKGROUND_COLOR);
+		JLabel opponentChoiceLabel = new JLabel("Choose Opponent Type:");
+		controlPanel.add(opponentChoiceLabel);
+		String[] opponentNames = new String[]{
+				SEEK_AND_DESTROY_PLAYER_NAME,
+				PROBABILITY_PLAYER_NAME,
+				RANDOM_PLAYER_NAME};
+		opponentTypeComboBox = new JComboBox<String>(opponentNames);
+		opponentTypeComboBox.setSelectedItem(currentOpponentType);
+		
+		opponentChoicePanel.add(opponentTypeComboBox);
+		opponentTypeComboBox.setMaximumSize(opponentTypeComboBox.getPreferredSize());
+		opponentTypeComboBox.addActionListener(this);
+		controlPanel.add(opponentChoicePanel);
+
+		if(getGame().getOpponent().getNumberOfDifficultyLevels() > 1) {
+			AIPlayer opponent = getGame().getOpponent();
+			opponent.setDifficultyLevel(difficultySetting);
 
 			JPanel difficultyPanel = new JPanel();
 			difficultyPanel.setBackground(BACKGROUND_COLOR);
 			difficultyPanel.setLayout(new BoxLayout(difficultyPanel, BoxLayout.Y_AXIS));
 
-			difficultyLabel = new JLabel("Difficulty: " + opponent.getHitProbability());
+			difficultyLabel = new JLabel("Difficulty: " + opponent.getDifficultyLevel());
 
 			JSlider difficultySlider = new JSlider(SwingConstants.HORIZONTAL);
-			difficultySlider.setMinimum(0);
-			difficultySlider.setMaximum(100);
-			difficultySlider.setValue(initialValue);
+			difficultySlider.setBackground(BACKGROUND_COLOR);
+			difficultySlider.setMinimum(1);
+			difficultySlider.setMaximum(getGame().getOpponent().getNumberOfDifficultyLevels());
+			difficultySlider.setValue(difficultySetting);
 			difficultySlider.addChangeListener(this);
 
 			difficultyPanel.add(difficultyLabel);
@@ -271,44 +304,23 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 */
 	private JPanel getStatusPanel() {
 		JPanel statusPanel = new JPanel();
-		statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
-		statusPanel.setLayout(new GridLayout(0, 1));
+		statusPanel.setLayout(new BorderLayout());
 		statusPanel.setBackground(Color.WHITE);
 
 		JPanel targetStatusPanel = new JPanel();
 		targetStatusPanel.setLayout(new BoxLayout(targetStatusPanel, BoxLayout.Y_AXIS));
 		targetStatusPanel.setBackground(Color.WHITE);
+		targetStatusPanel.add(new JLabel("Opponent Ship Status"));
+		targetStatusPanel.add(getShipStatusPanel(getGame().getOpponent().getShips()));
+		statusPanel.add(targetStatusPanel, BorderLayout.NORTH);
+
 		JPanel oceanStatusPanel = new JPanel();
 		oceanStatusPanel.setLayout(new BoxLayout(oceanStatusPanel, BoxLayout.Y_AXIS));
 		oceanStatusPanel.setBackground(Color.WHITE);
-
-		statusPanel.add(targetStatusPanel);
-		statusPanel.add(oceanStatusPanel);
-
-		targetStatusPanel.add(new JLabel("Opponent Ship Status"));
-		targetStatusPanel.add(getShipStatusPanel(getGame().getOpponent().getShips()));
-
 		oceanStatusPanel.add(new JLabel("Player Ship Status"));
 		oceanStatusPanel.add(getShipStatusPanel(getShips()));
-		JPanel previousShotPanel = new JPanel();
-		previousShotPanel.setLayout(new BoxLayout(previousShotPanel, BoxLayout.Y_AXIS));
-		previousShotPanel.setBackground(Color.WHITE);
+		statusPanel.add(oceanStatusPanel, BorderLayout.SOUTH);
 
-		JPanel playerShotPanel = new JPanel();
-		playerShotPanel.setLayout(new BoxLayout(playerShotPanel, BoxLayout.Y_AXIS));
-		playerShotPanel.add(new JLabel("Player Previous Shot: "));
-		playerShotPanel.add(playerPreviousShotLabel);
-		playerShotPanel.setBackground(Color.WHITE);
-		targetStatusPanel.add(playerShotPanel);
-
-		JPanel opponentShotPanel = new JPanel();
-		opponentShotPanel.setLayout(new BoxLayout(opponentShotPanel, BoxLayout.Y_AXIS));
-		opponentShotPanel.add(new JLabel("Opponent Previous Shot: "));
-		opponentShotPanel.add(opponentPreviousShotLabel);
-		opponentShotPanel.setBackground(Color.WHITE);
-		oceanStatusPanel.add(opponentShotPanel);
-
-		statusPanel.add(previousShotPanel);
 		return statusPanel;
 	}
 
@@ -349,7 +361,6 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 */
 	@Override
 	void play(BattleshipGame game) {
-		System.out.println("GUIPlayer.play()");
 		gameOver = false;
 		setGame(game);
 		placeShips();
@@ -481,20 +492,49 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		switch(e.getActionCommand()) {
-		case PLACE_SHIPS_LABEL:
-			placeShips();
-			break;
-		case NEW_GAME_LABEL:
-			newGame();
-			break;
-		case SALVO_TOGGLE_LABEL:
-			if(((AbstractButton)e.getSource()).isSelected()) {
-				setGameMode(GameMode.SALVO);
-			} else {
-				setGameMode(GameMode.BATTLESHIP);
+		if(e.getSource() == opponentTypeComboBox) {
+			String opponentName = opponentTypeComboBox.getSelectedItem().toString();
+			if(!opponentName.equals(currentOpponentType)) {
+				AIPlayer newPlayer = null;
+				switch(opponentName) {
+				case SEEK_AND_DESTROY_PLAYER_NAME:
+					newPlayer = new SeekAndDestroyPlayer(getOceanGridRowCount(), getOceanGridColumnCount(), getTargetGridRowCount(), getTargetGridColumnCount());
+					break;
+				case PROBABILITY_PLAYER_NAME:
+					newPlayer = new ProbabilityPlayer(getOceanGridRowCount(), getOceanGridColumnCount(), getTargetGridRowCount(), getTargetGridColumnCount());
+					break;
+				case RANDOM_PLAYER_NAME:
+					newPlayer = new RandomPlayer(getOceanGridRowCount(), getOceanGridColumnCount(), getTargetGridRowCount(), getTargetGridColumnCount());
+					break;
+				}
+				if(newPlayer != null) {
+					currentOpponentType = opponentName;
+					AIPlayer currentPlayer = getGame().getOpponent();
+					newPlayer.setRandomSeed(getRandom().nextLong());
+					newPlayer.setTargetGrid(currentPlayer.getTargetGrid());
+					newPlayer.setOceanGrid(currentPlayer.getOceanGrid());
+					newPlayer.setShips(currentPlayer.getShips());
+					newPlayer.setGame(getGame());
+					newPlayer.setDifficultyLevel(difficultySetting);
+					getGame().setAIPlayer(newPlayer);
+					controlPanel.removeAll();
+					controlPanel.add(getControlPanel(), BorderLayout.CENTER);
+					controlPanel.revalidate();
+				}
 			}
-			break;
+		} else {
+			switch(e.getActionCommand()) {
+			case NEW_GAME_LABEL:
+				newGame();
+				break;
+			case SALVO_TOGGLE_LABEL:
+				if(((AbstractButton)e.getSource()).isSelected()) {
+					setGameMode(GameMode.SALVO);
+				} else {
+					setGameMode(GameMode.BATTLESHIP);
+				}
+				break;
+			}
 		}
 	}
 
@@ -504,15 +544,16 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 		if(source instanceof JSlider) {
 			JSlider slider = (JSlider) source;
 			int value = slider.getValue();
-			difficultySetting = value/100.0;
-			ProbabilityPlayer opponent = (ProbabilityPlayer)getGame().getOpponent();
-			opponent.setHitProbability(difficultySetting);
-			difficultyLabel.setText("Difficulty: " + opponent.getHitProbability());
+			difficultySetting = value;
+			AIPlayer opponent = getGame().getOpponent();
+			opponent.setDifficultyLevel(difficultySetting);
+			difficultyLabel.setText("Difficulty: " + opponent.getDifficultyLevel());
 		}
 	}
 
 	private void newGame() {
 		getGame().newGame();
+		getGame().getOpponent().setDifficultyLevel(difficultySetting);
 	}
 
 	private void endGame() {
@@ -532,27 +573,28 @@ public class GUIPlayer extends UIPlayer implements ActionListener, ChangeListene
 	 */
 	private void updateStatus() {
 		statusPanel.removeAll();
-		statusPanel.add(getStatusPanel());
+		statusPanel.add(getStatusPanel(), BorderLayout.CENTER);
+		statusPanel.revalidate();
 	}
-	
+
 	private GameMode getGameMode() {
 		return mode;
 	}
-	
+
 	private void setGameMode(GameMode mode) {
 		this.mode = mode;
 		clearSalvoQueue();
 		updateSalvoSize();
 	}
-	
+
 	private int getSalvoSize() {
 		return salvoSize;
 	}
-	
+
 	private void setSalvoSize(int salvoSize) {
 		this.salvoSize = salvoSize;
 	}
-	
+
 	private void clearSalvoQueue() {
 		for(JComponent cellComponent: salvoCellComponents) {
 			cellComponent.setBackground(TARGET_GRID_FIELD_COLOR);

@@ -4,6 +4,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
+/**
+ * Provides a command line interface to the Battleship game. 
+ * This was used for development purposes, and development of
+ * the command line interface was stopped when the GUI Player
+ * was added.
+ * 
+ * @author enordber
+ *
+ */
 class CommandLinePlayer extends UIPlayer {
 	private static HashMap<String,String> menuItemDesciptions = new HashMap<String, String>();
 	static {

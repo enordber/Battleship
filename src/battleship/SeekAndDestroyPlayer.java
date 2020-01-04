@@ -8,8 +8,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import javax.swing.text.MaskFormatter;
-
 /**
  * AI Player that mimics a human player, using only information that
  * would be available to a human player.
@@ -18,6 +16,7 @@ import javax.swing.text.MaskFormatter;
  *
  */
 public class SeekAndDestroyPlayer extends AIPlayer {
+	private static final int DIFFICULTY_LEVELS = 100;
 	private ArrayDeque<TargetShip> destroyQueue = new ArrayDeque<TargetShip>();
 
 	//Assuming there is a maximum of one ship per type
@@ -28,22 +27,27 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			int targetGridRowCount, int targetGridColumnCount) {
 		super(oceanGridRowCount, oceanGridColumnCount, targetGridRowCount,
 				targetGridColumnCount);
+		setDifficultyLevel(DIFFICULTY_LEVELS);
 	}
 
 	@Override
 	int[] getNextShotPosition() {
 		int[] r = new int[2];
-		if(destroyQueue.size() == 0) {
-			r = getNextSeekPosition();
-		} else {
-			r = getNextDestroyPosition();
-			if(r == null) {
-				//In SALVO mode, all available 'destroy' positions may be 
-				//targeted. Remaining shots will be 'seek' shots.
+		boolean goodShot = getRandom().nextInt(DIFFICULTY_LEVELS) < getDifficultyLevel();
+		if(goodShot) {
+			if(destroyQueue.size() == 0) {
 				r = getNextSeekPosition();
+			} else {
+				r = getNextDestroyPosition();
+				if(r == null) {
+					//In SALVO mode, all available 'destroy' positions may be 
+					//targeted. Remaining shots will be 'seek' shots.
+					r = getNextSeekPosition();
+				}
 			}
+		} else {
+			r = getRandomShotPosition();
 		}
-		System.out.println("SeekAndDestroyPlayer.getNextShotPosition() " + Arrays.toString(r));
 		return r;
 	}
 
@@ -127,6 +131,19 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 			//randomly select from available candidates
 			r = candidatePositions.get(getRandom().nextInt(candidatePositions.size()));
 		}
+		return r;
+	}
+
+	int[] getRandomShotPosition() {
+		int[] r = new int[2];
+		int row = getRandom().nextInt(getTargetGridRowCount());
+		int column = getRandom().nextInt(getTargetGridColumnCount());
+		while(getTargetGrid()[row][column] != Ship.UNKNOWN_SHIP) {
+			row = getRandom().nextInt(getTargetGridRowCount());
+			column = getRandom().nextInt(getTargetGridColumnCount());			
+		}
+		r[columnIndex] = column;
+		r[rowIndex] = row;
 		return r;
 	}
 
@@ -237,13 +254,13 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 	 * @return shot position
 	 */
 	private int[] getNextMaximizeDisruptionPosition() {
-		System.out.println("SeekAndDestroyPlayer.getNextMaximizeDisruptionPosition()");
+//		System.out.println("SeekAndDestroyPlayer.getNextMaximizeDisruptionPosition()");
 		int[]r = new int[2];
 		int maxPlacementsDisrupted = 0;
 		ArrayList<int[]> maxDisruptivePositions = new ArrayList<int[]>();
 		Ship[][] targetGrid = getTargetGrid();
 		int shipSize = getSizeOfLargestUnlocatedShip();
-		System.out.println("\tshipSize: " + shipSize);
+//		System.out.println("\tshipSize: " + shipSize);
 
 		for(int row = 0; row < targetGrid.length; row++) {
 			for(int column = 0; column < targetGrid[row].length; column++) {
@@ -262,8 +279,8 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 				}
 			}
 		}
-		System.out.println("\tmaxPlacementsDisrupted: " + maxPlacementsDisrupted);
-		System.out.println("\tmaxDisruptivePositions: " + maxDisruptivePositions.size());
+//		System.out.println("\tmaxPlacementsDisrupted: " + maxPlacementsDisrupted);
+//		System.out.println("\tmaxDisruptivePositions: " + maxDisruptivePositions.size());
 		int index = getRandom().nextInt(maxDisruptivePositions.size());
 		r = maxDisruptivePositions.get(index);
 
@@ -485,5 +502,10 @@ public class SeekAndDestroyPlayer extends AIPlayer {
 		private ArrayList<int[]> getKnownPositions() {
 			return knownPositions;
 		}
+	}
+
+	@Override
+	int getNumberOfDifficultyLevels() {
+		return DIFFICULTY_LEVELS;
 	}
 }

@@ -21,5 +21,10 @@ public class RandomPlayer extends AIPlayer {
 		r[rowIndex] = row;
 		return r;
 	}
+	
+	@Override
+	int getNumberOfDifficultyLevels() {
+		return 1;
+	}
 
 }

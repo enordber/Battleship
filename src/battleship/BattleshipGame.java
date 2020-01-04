@@ -59,12 +59,16 @@ public class BattleshipGame {
 		uiPlayer.init();
 		uiPlayer.play(this);
 	}
+	
+	void setAIPlayer(AIPlayer player) {
+		this.aiPlayer = player;
+	}
 
 	Ship shootAt(int column, int row) {
 		return aiPlayer.shotAt(column, row);
 	}
 	
-	Player getOpponent() {
+	AIPlayer getOpponent() {
 		return aiPlayer;
 	}
 	

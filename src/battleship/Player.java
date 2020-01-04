@@ -68,10 +68,18 @@ abstract class Player {
 		return targetGrid;
 	}
 	
+	void setTargetGrid(Ship[][] targetGrid) {
+		this.targetGrid = targetGrid;
+	}
+	
 	Ship[][] getOceanGrid() {
 		return oceanGrid;
 	}
 	
+	void setOceanGrid(Ship[][] oceanGrid) {
+		this.oceanGrid = oceanGrid;
+	}
+		
 	/**
 	 * Default placement is random.
 	 * 
@@ -162,6 +170,10 @@ abstract class Player {
 
 	ArrayList<Ship> getShips() {
 		return ships;
+	}
+	
+	void setShips(ArrayList<Ship> ships) {
+		this.ships = ships;
 	}
 
 	/**
@@ -285,6 +297,7 @@ abstract class UIPlayer extends Player {
  *
  */
 abstract class AIPlayer extends Player {
+	private int difficultyLevel = 100;
 	private ArrayList<int[]> salvoShots = new ArrayList<int[]>(5);
 
 	AIPlayer(int oceanGridRowCount, int oceanGridColumnCount,
@@ -294,6 +307,18 @@ abstract class AIPlayer extends Player {
 	}
 	
 	abstract int[] getNextShotPosition();
+
+	int getNumberOfDifficultyLevels() {
+		return 1;
+	}
+
+	int getDifficultyLevel() {
+		return difficultyLevel;
+	}
+	
+	void setDifficultyLevel(int difficultyLevel) {
+		this.difficultyLevel = difficultyLevel;
+	}
 	
 	ArrayList<int[]> getNextSalvoShotPositions() {
 		salvoShots.clear();
